@@ -29,8 +29,13 @@ These commands will install the Go SQL driver and GORM (Go Object Relational Map
 
 ### Step 4: Run the Application
 
-Once the Docker containers are up and running, you can access the application at [http://localhost:8080](http://localhost:8080).
+Once the Docker containers are up and running, you can access the application at [http://localhost:9000](http://localhost:9000).
 
+
+
+## Database Setup
+Indexing, Migration, local dockerized setup
+SOS :Single quotes for auto-migration''
 ## Usage
 
 [Provide instructions on how to use the application, including any endpoints or functionalities.]

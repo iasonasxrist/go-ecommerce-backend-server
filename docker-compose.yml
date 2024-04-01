@@ -17,7 +17,7 @@ services:
 
   pgadmin:
     image: dpage/pgadmin4:latest
-    restart: always
+    # restart: always
 
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@admin.com # Default email for pgAdmin
