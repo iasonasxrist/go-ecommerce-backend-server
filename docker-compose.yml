@@ -1,0 +1,31 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: shopping-db
+
+    ports:
+      - "5433:5432"
+
+    environment:
+      POSTGRES_DB: online-shopping
+      POSTGRES_USER: postgres #Postgres username
+      POSTGRES_PASSWORD: postgres #Postgres password
+    volumes:
+      - ./postgres_data:/var/lib/postgresql/data
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    restart: always
+
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com # Default email for pgAdmin
+      PGADMIN_DEFAULT_PASSWORD: admin # Default password for pgAdmin
+
+    ports:
+      - "5050:80" # Port mapping for pgAdmin (host_port:container_port)
+
+volumes:
+  db:
+    driver: local
