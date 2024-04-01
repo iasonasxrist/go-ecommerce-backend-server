@@ -2,6 +2,8 @@ package api
 
 import (
 	"ecommerce.com/config"
+	"ecommerce.com/internal/api/rest"
+	"ecommerce.com/internal/api/rest/services"
 	"github.com/gin-gonic/gin"
 )
 
@@ -9,10 +11,19 @@ func StartServer(config config.AppConfig) {
 
 	app := gin.Default()
 
-	app.GET("/health", HealthCheck)
+	restHandler := &rest.RestHandler{
+		App: app,
+	}
+
+	setupRoutes(restHandler)
 	app.Run(config.ServerPort)
 }
 
-func HealthCheck(ctx *gin.Context) {
-	ctx.JSON(200, gin.H{"status": "Ok"})
+func setupRoutes(rh *rest.RestHandler) {
+	// user
+	services.SetupUserRoutes(rh)
+
+	// transactions
+
+	// catalog
 }
