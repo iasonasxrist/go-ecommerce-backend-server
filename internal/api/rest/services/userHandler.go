@@ -1,11 +1,13 @@
 package services
 
 import (
+	"net/http"
+
 	"ecommerce.com/internal/api/rest"
 	"ecommerce.com/internal/dto"
+	"ecommerce.com/internal/repository"
 	"ecommerce.com/internal/service"
 	"github.com/gin-gonic/gin"
-	"net/http"
 )
 
 type UserHandler struct {
@@ -17,7 +19,9 @@ func SetupUserRoutes(rh *rest.RestHandler) {
 	app := rh.App
 
 	// add and inject userService into handler
-	svc := service.UserService{}
+	svc := service.UserService{
+		Repo: repository.NewRepository(rh.Db),
+	}
 	handler := UserHandler{
 		svc: svc,
 	}
@@ -49,14 +53,13 @@ func (h *UserHandler) Register(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, gin.H{"message": "plese provide valid outputs"})
 		return
 	}
+
 	token, err := h.svc.Signup(user)
 
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"message": "server error"})
 		return
 	}
-	ctx.JSON(200, gin.H{"message": "register"})
-	return
 
 	ctx.JSON(http.StatusOK, gin.H{"message": token})
 	return

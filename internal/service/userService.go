@@ -5,21 +5,26 @@ import (
 
 	"ecommerce.com/internal/domain"
 	"ecommerce.com/internal/dto"
+	"ecommerce.com/internal/repository"
 )
 
 type UserService struct {
+	Repo repository.UserRepository
 }
 
 func (s UserService) FindByEmail(email string) (*domain.User, error) {
 
-	// perform database operations
-	return nil, nil
+	user, err := s.Repo.FindUser(email)
+	return &user, err
 }
 
 func (s UserService) Signup(input dto.UserSignup) (string, error) {
 
-	log.Println(input)
-	// perform database operations
+	user, err := s.Repo.CreateUser(domain.User{
+		Email: input.Email,
+		Password: input.Password,
+		Phone: input.Phone,
+	})
 	return "this-is-my-token", nil
 }
 
