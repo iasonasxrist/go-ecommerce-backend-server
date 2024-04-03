@@ -3,6 +3,7 @@ package services
 import (
 	"net/http"
 
+	"ecommerce.com/helper"
 	"ecommerce.com/internal/api/rest"
 	"ecommerce.com/internal/dto"
 	"ecommerce.com/internal/repository"
@@ -12,6 +13,7 @@ import (
 
 type UserHandler struct {
 	svc service.UserService
+	auth helper.Auth
 }
 
 func SetupUserRoutes(rh *rest.RestHandler) {
@@ -24,6 +26,7 @@ func SetupUserRoutes(rh *rest.RestHandler) {
 	}
 	handler := UserHandler{
 		svc: svc,
+		Auth :auth
 	}
 
 	app.POST("/register", handler.Register)
@@ -68,12 +71,24 @@ func (h *UserHandler) Register(ctx *gin.Context) {
 
 func (h *UserHandler) Login(ctx *gin.Context) {
 
-	// if err != nil {
-	// 	logger.Error("connection error :%v", err)
-	// 	return
-	// }
-	ctx.JSON(200, gin.H{"message": "register"})
-	return
+	var loginInput dto.UserLogin
+
+	err := ctx.BindJSON(&loginInput)
+
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"message": "plese provide valid inputs"})
+		return
+	}
+
+	token, err := h.svc.Login(loginInput.Email, loginInput.Password)
+
+	if err != nil {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"message": "plese provide correct user id password"})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"message": token})
+
 }
 
 func (h *UserHandler) Verify(ctx *gin.Context) {
