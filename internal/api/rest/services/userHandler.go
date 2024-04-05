@@ -23,26 +23,29 @@ func SetupUserRoutes(rh *rest.RestHandler) {
 	// add and inject userService into handler
 	svc := service.UserService{
 		Repo: repository.NewRepository(rh.Db),
+		Auth: rh.Auth,
 	}
 	handler := UserHandler{
 		svc: svc,
-		Auth :auth
 	}
+	pubRoutes := app.Group("/users")
 
-	app.POST("/register", handler.Register)
-	app.POST("/login", handler.Login)
+	pubRoutes.POST("/register", handler.Register)
+	pubRoutes.POST("/login", handler.Login)
 
-	app.GET("/verify", handler.GetVerificationCode)
-	app.POST("/verify", handler.Verify)
-	app.GET("/profile", handler.GetProfile)
-	app.POST("/profile", handler.CreateProfile)
+	pvtRoutes := pubRoutes.Group("/", rh.Auth.Authorization)
 
-	app.GET("/cart", handler.GetCart)
-	app.POST("/cart", handler.AddToCart)
-	app.GET("/order/:id", handler.GetOrder)
-	app.POST("/order", handler.GetOrders)
+	pvtRoutes.GET("/verify", handler.GetVerificationCode)
+	pvtRoutes.POST("/verify", handler.Verify)
+	pvtRoutes.GET("/profile", handler.GetProfile)
+	pvtRoutes.POST("/profile", handler.CreateProfile)
 
-	app.POST("/become-seller", handler.BecomeSeller)
+	pvtRoutes.GET("/cart", handler.GetCart)
+	pvtRoutes.POST("/cart", handler.AddToCart)
+	pvtRoutes.GET("/order/:id", handler.GetOrder)
+	pvtRoutes.POST("/order", handler.GetOrders)
+
+	pvtRoutes.POST("/become-seller", handler.BecomeSeller)
 
 }
 
