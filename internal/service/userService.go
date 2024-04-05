@@ -20,14 +20,19 @@ func (s UserService) FindByEmail(email string) (*domain.User, error) {
 	return &user, err
 }
 
-func (s UserService) Signup(input dto.UserSignup) (*domain.User, error) {
+func (s UserService) Signup(input dto.UserSignup) (string, error) {
 
+	hPassword, err := s.Auth.CreateHashPassword(input.Password)
+
+	if err != nil {
+		return "", nil
+	}
 	user, err := s.Repo.CreateUser(domain.User{
 		Email:    input.Email,
-		Password: input.Password,
+		Password: hPassword,
 		Phone:    input.Phone,
 	})
-	return &user, err
+	return s.Auth.GenerateToken(user.ID, user.Email, user.UserType)
 }
 
 func (s UserService) Login(email string, password string) (string, error) {
@@ -37,8 +42,13 @@ func (s UserService) Login(email string, password string) (string, error) {
 	if err != nil {
 		return "", errors.New("user does not exist with the provided email id")
 	}
+	err = s.Auth.VerifyPassword(password, user.Password)
 
-	return user.Email, nil
+	if err != nil {
+		return "", nil
+	}
+	// generate token
+	return s.Auth.GenerateToken(user.ID, user.Email, user.UserType)
 }
 
 func (s UserService) GetVerificationCode(e domain.User) (int, error) {
