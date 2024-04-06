@@ -1,11 +1,10 @@
 package main
 
 import (
-	"fmt"
-	"log"
-
 	"ecommerce.com/config"
 	"ecommerce.com/internal/api"
+	"fmt"	
+	"log"
 )
 
 func main() {
