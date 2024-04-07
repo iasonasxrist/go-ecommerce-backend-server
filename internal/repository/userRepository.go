@@ -1,11 +1,11 @@
 package repository
 
 import (
-	"errors"
-	"log"
 	"ecommerce.com/internal/domain"
+	"errors"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
+	"log"
 )
 
 type UserRepository interface {
@@ -61,8 +61,14 @@ func (r userRepository) FindUserById(id uint) (domain.User, error) {
 	err := r.db.First(&user, id).Error
 
 	if err != nil {
-		log.Printf("find user error %v", err)
-		return domain.User{}, errors.New("user doesnt exist")
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			log.Printf("user with ID %d not found", id)
+			return domain.User{}, errors.New("user not found")
+		}
+		// Handle other database errors
+		log.Printf("find user error: %v", err)
+		return domain.User{}, err
+
 	}
 
 	return user, nil
