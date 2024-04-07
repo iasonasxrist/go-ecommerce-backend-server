@@ -1,8 +1,9 @@
 package services
 
 import (
+	"fmt"
+	"log"
 	"net/http"
-
 	"ecommerce.com/helper"
 	"ecommerce.com/internal/api/rest"
 	"ecommerce.com/internal/dto"
@@ -12,7 +13,7 @@ import (
 )
 
 type UserHandler struct {
-	svc service.UserService
+	svc  service.UserService
 	auth helper.Auth
 }
 
@@ -28,6 +29,7 @@ func SetupUserRoutes(rh *rest.RestHandler) {
 	handler := UserHandler{
 		svc: svc,
 	}
+
 	pubRoutes := app.Group("/users")
 
 	pubRoutes.POST("/register", handler.Register)
@@ -57,24 +59,24 @@ func (h *UserHandler) Register(ctx *gin.Context) {
 
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"message": "plese provide valid outputs"})
-		return
+
 	}
 
 	token, err := h.svc.Signup(user)
+	fmt.Printf("token 1%v", err)
 
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"message": "server error"})
-		return
+
 	}
 
 	ctx.JSON(http.StatusOK, gin.H{"message": token})
-	return
 
 }
 
 func (h *UserHandler) Login(ctx *gin.Context) {
 
-	var loginInput dto.UserLogin
+	loginInput := dto.UserLogin{}
 
 	err := ctx.BindJSON(&loginInput)
 
@@ -96,32 +98,52 @@ func (h *UserHandler) Login(ctx *gin.Context) {
 
 func (h *UserHandler) Verify(ctx *gin.Context) {
 
-	// if err != nil {
-	// 	logger.Error("connection error :%v", err)
-	// 	return
-	// }
-	ctx.JSON(200, gin.H{"message": "register"})
-	return
+	user := h.svc.Auth.GetCurrentUser(ctx)
+	fmt.Printf("*****user that bugs *******\n %v", user)
+	var req dto.VerificationCodeInput
+
+	if err := ctx.BindJSON(&req); err != nil {
+		fmt.Printf("code123 %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"message": "please provide a valid input"})
+	}
+
+	fmt.Printf("Type of user.ID: %T\n", user.ID)
+	fmt.Printf("Type of req.Code: %T\n", req.Code)
+
+	err := h.svc.VerifyCode(user.ID, req.Code)
+
+	if err != nil {
+		log.Printf("Error : %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
+
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"message": "verified successfully"})
+
 }
 
 func (h *UserHandler) GetVerificationCode(ctx *gin.Context) {
 
-	// if err != nil {
-	// 	logger.Error("connection error :%v", err)
-	// 	return
-	// }
-	ctx.JSON(200, gin.H{"message": "register"})
-	return
+	user := h.svc.Auth.GetCurrentUser(ctx)
+	// fmt.Printf("userfgf %v", user)
+
+	code, err := h.svc.GetVerificationCode(user)
+
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"message": "unable to generate verification code"})
+	}
+	ctx.JSON(http.StatusOK, gin.H{"message": "verification Code",
+		"data": code})
+
 }
 
 func (h *UserHandler) GetProfile(ctx *gin.Context) {
 
-	// if err != nil {
-	// 	logger.Error("connection error :%v", err)
-	// 	return
-	// }
-	ctx.JSON(200, gin.H{"message": "Get Profile"})
-	return
+	user := h.svc.Auth.GetCurrentUser(ctx)
+
+	//TODO// Error on user set
+
+	ctx.JSON(http.StatusOK, gin.H{"message": "Get Profile", "user": user})
 }
 
 func (h *UserHandler) CreateProfile(ctx *gin.Context) {
@@ -130,8 +152,7 @@ func (h *UserHandler) CreateProfile(ctx *gin.Context) {
 	// 	logger.Error("connection error :%v", err)
 	// 	return
 	// }
-	ctx.JSON(200, gin.H{"message": "Create Profile"})
-	return
+	ctx.JSON(http.StatusOK, gin.H{"message": "Create Profile"})
 }
 
 func (h *UserHandler) GetCart(ctx *gin.Context) {
@@ -140,8 +161,7 @@ func (h *UserHandler) GetCart(ctx *gin.Context) {
 	// 	logger.Error("connection error :%v", err)
 	// 	return
 	// }
-	ctx.JSON(200, gin.H{"message": "Get Cart"})
-	return
+	ctx.JSON(http.StatusOK, gin.H{"message": "Get Cart"})
 }
 
 func (h *UserHandler) AddToCart(ctx *gin.Context) {
@@ -150,8 +170,7 @@ func (h *UserHandler) AddToCart(ctx *gin.Context) {
 	// 	logger.Error("connection error :%v", err)
 	// 	return
 	// }
-	ctx.JSON(200, gin.H{"message": "Add To Cart"})
-	return
+	ctx.JSON(http.StatusOK, gin.H{"message": "Add To Cart"})
 }
 
 func (h *UserHandler) GetOrders(ctx *gin.Context) {
@@ -160,8 +179,7 @@ func (h *UserHandler) GetOrders(ctx *gin.Context) {
 	// 	logger.Error("connection error :%v", err)
 	// 	return
 	// }
-	ctx.JSON(200, gin.H{"message": "Get Orders"})
-	return
+	ctx.JSON(http.StatusOK, gin.H{"message": "Get Orders"})
 }
 
 func (h *UserHandler) GetOrder(ctx *gin.Context) {
@@ -170,8 +188,7 @@ func (h *UserHandler) GetOrder(ctx *gin.Context) {
 	// 	logger.Error("connection error :%v", err)
 	// 	return
 	// }
-	ctx.JSON(200, gin.H{"message": "Get Order"})
-	return
+	ctx.JSON(http.StatusOK, gin.H{"message": "Get Order"})
 }
 
 func (h *UserHandler) BecomeSeller(ctx *gin.Context) {
@@ -180,6 +197,6 @@ func (h *UserHandler) BecomeSeller(ctx *gin.Context) {
 	// 	logger.Error("connection error :%v", err)
 	// 	return
 	// }
-	ctx.JSON(200, gin.H{"message": "Become a Seller"})
-	return
+	ctx.JSON(http.StatusOK, gin.H{"message": "Become a Seller"})
+
 }
