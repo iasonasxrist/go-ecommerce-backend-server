@@ -2,6 +2,9 @@ package service
 
 import (
 	"errors"
+	"fmt"
+	"log"
+	"time"
 
 	"ecommerce.com/helper"
 	"ecommerce.com/internal/domain"
@@ -32,6 +35,9 @@ func (s UserService) Signup(input dto.UserSignup) (string, error) {
 		Password: hPassword,
 		Phone:    input.Phone,
 	})
+
+	log.Printf("user created %v", user)
+
 	return s.Auth.GenerateToken(user.ID, user.Email, user.UserType)
 }
 
@@ -43,22 +49,82 @@ func (s UserService) Login(email string, password string) (string, error) {
 		return "", errors.New("user does not exist with the provided email id")
 	}
 	err = s.Auth.VerifyPassword(password, user.Password)
-
 	if err != nil {
-		return "", nil
+		return "", err
 	}
 	// generate token
 	return s.Auth.GenerateToken(user.ID, user.Email, user.UserType)
 }
 
+func (s UserService) IsVerified(id uint) bool {
+
+	currentUser, err := s.Repo.FindUserById(id)
+
+	return err == nil && currentUser.Verified
+}
+
 func (s UserService) GetVerificationCode(e domain.User) (int, error) {
 
-	return 0, nil
+	if s.IsVerified(e.ID) {
+		return 0, errors.New("user already verified")
+	}
+
+	code, err := s.Auth.GenerateCode()
+
+	if err != nil {
+		return 0, nil
+	}
+
+	user := domain.User{
+		Expiry: time.Now().Add(30 * time.Minute),
+		Code:   code,
+	}
+
+	_, err = s.Repo.UpdateUser(e.ID, user)
+
+	if err != nil {
+		return 0, errors.New("unable to update verification code")
+	}
+
+	// Send SMS
+	return code, nil
 }
 
 func (s UserService) VerifyCode(id uint, code int) error {
 
-	return nil
+	if s.IsVerified(id) {
+		return errors.New("user already verified")
+	}
+
+	user, err := s.Repo.FindUserById(id)
+
+	fmt.Printf("*****myyyy uswrrr***** \n",user)
+	// correct
+
+	if err != nil {
+		return errors.New(err.Error())
+	}
+
+	fmt.Printf("hehehe %v and %v",user.Code,code)
+	if user.Code != code {
+		return errors.New("verification code does not match")
+	}
+
+	if !time.Now().Before(user.Expiry) {
+		return errors.New("verification code expired")
+	}
+
+	userUpdated := domain.User{
+		Verified: true,
+	}
+
+	_, err = s.Repo.UpdateUser(id, userUpdated)
+
+	if err != nil {
+		return errors.New("unable to verify uset")
+	}
+
+	return  nil
 }
 
 func (s UserService) CreateProfile(id uint, input any) error {
