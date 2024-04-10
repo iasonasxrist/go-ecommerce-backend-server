@@ -86,6 +86,8 @@ func (a Auth) VerifyToken(t string) (domain.User, error) {
 
 	tokenStr := tokenArr[1]
 
+	fmt.Printf("Token string: %s\n", tokenStr)
+
 	// Parse the token string
 	token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
@@ -124,7 +126,7 @@ func (a Auth) Authorization(ctx *gin.Context) {
 
 	user, err := a.VerifyToken(authHeader)
 	//jwt: token contains an invalid number of segments")
-	// fmt.Printf("err123,%v", user, err)
+	fmt.Printf("err123,%v", user, err)
 
 	if err != nil && user.ID > 0 {
 		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
@@ -132,23 +134,34 @@ func (a Auth) Authorization(ctx *gin.Context) {
 		return
 	}
 
+
+	// if user.ID == 0 {
+	// 	ctx.AbortWithStatus(http.StatusUnauthorized)
+	//    }
+
 	ctx.Set("user", user)
 	ctx.Next()
 }
-
 func (a Auth) GetCurrentUser(ctx *gin.Context) domain.User {
+    user,_ := ctx.Get("user")
 
-	user, exists := ctx.Get("user")
+    // if !exists {
+    //     log.Fatalf("User doesn't exist in context")
+    // }
 
-	if !exists {
-		log.Fatalf("User doesnt exists %v", user)
+    // Debug logging
+    log.Printf("User data retrieved from context: %v", user)
 
-	}
+    // Type assertion
+    if user, ok := user.(domain.User); ok {
+        return user
+    } else {
+        log.Fatalf("User data is not of type domain.User")
+    }
 
-	return user.(domain.User)
-
+    // Return a default user or handle the error as needed
+    return domain.User{} // Or handle the error in an appropriate way
 }
-
 func (a Auth) GenerateCode() (int, error) {
 	return RandomCodeGeneration(6)
 }
