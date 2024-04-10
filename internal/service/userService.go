@@ -4,17 +4,21 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strconv"
 	"time"
 
+	"ecommerce.com/config"
 	"ecommerce.com/helper"
 	"ecommerce.com/internal/domain"
 	"ecommerce.com/internal/dto"
 	"ecommerce.com/internal/repository"
+	"ecommerce.com/pkg/notification"
 )
 
 type UserService struct {
-	Repo repository.UserRepository
-	Auth helper.Auth
+	Repo   repository.UserRepository
+	Auth   helper.Auth
+	Config config.AppConfig
 }
 
 func (s UserService) FindByEmail(email string) (*domain.User, error) {
@@ -63,16 +67,16 @@ func (s UserService) IsVerified(id uint) bool {
 	return err == nil && currentUser.Verified
 }
 
-func (s UserService) GetVerificationCode(e domain.User) (int, error) {
+func (s UserService) GetVerificationCode(e domain.User) error {
 
 	if s.IsVerified(e.ID) {
-		return 0, errors.New("user already verified")
+		return errors.New("user already verified")
 	}
 
 	code, err := s.Auth.GenerateCode()
 
 	if err != nil {
-		return 0, nil
+		return nil
 	}
 
 	user := domain.User{
@@ -83,11 +87,14 @@ func (s UserService) GetVerificationCode(e domain.User) (int, error) {
 	_, err = s.Repo.UpdateUser(e.ID, user)
 
 	if err != nil {
-		return 0, errors.New("unable to update verification code")
+		return errors.New("unable to update verification code")
 	}
+	user, err = s.Repo.FindUserById(user.ID)
 
 	// Send SMS
-	return code, nil
+	notificationClient := notification.NewNotificationClient(s.Config)
+	notificationClient.SendSMS(user.Phone, strconv.Itoa(code))
+	return nil
 }
 
 func (s UserService) VerifyCode(id uint, code int) error {
@@ -98,14 +105,14 @@ func (s UserService) VerifyCode(id uint, code int) error {
 
 	user, err := s.Repo.FindUserById(id)
 
-	fmt.Printf("*****myyyy uswrrr***** \n",user)
+	fmt.Printf("**** Correct user data ***** %v\n", user)
 	// correct
 
 	if err != nil {
 		return errors.New(err.Error())
 	}
 
-	fmt.Printf("hehehe %v and %v",user.Code,code)
+	fmt.Printf("hehehe %v and %v", user.Code, code)
 	if user.Code != code {
 		return errors.New("verification code does not match")
 	}
@@ -124,7 +131,7 @@ func (s UserService) VerifyCode(id uint, code int) error {
 		return errors.New("unable to verify uset")
 	}
 
-	return  nil
+	return nil
 }
 
 func (s UserService) CreateProfile(id uint, input any) error {
