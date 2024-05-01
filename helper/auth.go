@@ -58,6 +58,8 @@ func (a Auth) GenerateToken(id uint, email string, role string) (string, error) 
 	if err != nil {
 		return "", errors.New("unable to signed the token")
 	}
+	// ctx.SetSameSite(http.SameSiteLaxMode)
+	// ctx.SetCookie("Authorization", tokenString, 3600*24*30, "", "", false, true)
 
 	return tokenString, nil
 }
@@ -126,41 +128,37 @@ func (a Auth) Authorization(ctx *gin.Context) {
 
 	user, err := a.VerifyToken(authHeader)
 	//jwt: token contains an invalid number of segments")
-	fmt.Printf("err123,%v", user, err)
+	log.Print("err123,", user, err)
 
-	if err != nil && user.ID > 0 {
-		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
-		ctx.Abort()
+	if err == nil && user.ID > 0 {
+		ctx.Set("user", user)
+		ctx.Next()
+
+	} else {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization failed"})
 		return
 	}
 
-
-	// if user.ID == 0 {
-	// 	ctx.AbortWithStatus(http.StatusUnauthorized)
-	//    }
-
-	ctx.Set("user", user)
-	ctx.Next()
 }
 func (a Auth) GetCurrentUser(ctx *gin.Context) domain.User {
-    user,_ := ctx.Get("user")
+	user, exists := ctx.Get("user")
 
-    // if !exists {
-    //     log.Fatalf("User doesn't exist in context")
-    // }
+	if !exists {
+		log.Fatalf("User doesn't exist in context")
+	}
 
-    // Debug logging
-    log.Printf("User data retrieved from context: %v", user)
+	
 
-    // Type assertion
-    if user, ok := user.(domain.User); ok {
-        return user
-    } else {
-        log.Fatalf("User data is not of type domain.User")
-    }
+	if user, ok := user.(domain.User); ok {
+		// Debug logging
+	log.Printf("User data retrieved from context: %v", user)
+	
+	} else {
+		log.Fatalf("User data is not of type domain.User")
+	}
 
-    // Return a default user or handle the error as needed
-    return domain.User{} // Or handle the error in an appropriate way
+	// Return a default user or handle the error as needed
+	return user.(domain.User) // Or handle the error in an appropriate way
 }
 func (a Auth) GenerateCode() (int, error) {
 	return RandomCodeGeneration(6)
