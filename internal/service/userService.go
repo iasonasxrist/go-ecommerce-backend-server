@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"strconv"
+	// "strconv"
 	"time"
 
 	"ecommerce.com/config"
@@ -13,6 +13,8 @@ import (
 	"ecommerce.com/internal/dto"
 	"ecommerce.com/internal/repository"
 	"ecommerce.com/pkg/notification"
+	"github.com/twilio/twilio-go"
+	twilioApi "github.com/twilio/twilio-go/rest/api/v2010"
 )
 
 type UserService struct {
@@ -34,7 +36,7 @@ func (s UserService) Signup(input dto.UserSignup) (string, error) {
 	if err != nil {
 		return "", nil
 	}
-	user, err := s.Repo.CreateUser(domain.User{
+	user, _ := s.Repo.CreateUser(domain.User{
 		Email:    input.Email,
 		Password: hPassword,
 		Phone:    input.Phone,
@@ -67,16 +69,16 @@ func (s UserService) IsVerified(id uint) bool {
 	return err == nil && currentUser.Verified
 }
 
-func (s UserService) GetVerificationCode(e domain.User) error {
+func (s UserService) GetVerificationCode(e domain.User) (int,error) {
 
 	if s.IsVerified(e.ID) {
-		return errors.New("user already verified")
+		return 0, nil
 	}
 
 	code, err := s.Auth.GenerateCode()
 
 	if err != nil {
-		return nil
+		return 0, err
 	}
 
 	user := domain.User{
@@ -87,14 +89,14 @@ func (s UserService) GetVerificationCode(e domain.User) error {
 	_, err = s.Repo.UpdateUser(e.ID, user)
 
 	if err != nil {
-		return errors.New("unable to update verification code")
+		return 0,errors.New("unable to update verification code")
 	}
-	user, err = s.Repo.FindUserById(user.ID)
+	// user, err = s.Repo.FindUserById(user.ID)
 
 	// Send SMS
-	notificationClient := notification.NewNotificationClient(s.Config)
-	notificationClient.SendSMS(user.Phone, strconv.Itoa(code))
-	return nil
+	// notificationClient := notification.NewNotificationClient(s.Config)
+	// notificationClient.SendSMS(user.Phone, strconv.Itoa(code))
+	return code, nil
 }
 
 func (s UserService) VerifyCode(id uint, code int) error {
@@ -112,11 +114,6 @@ func (s UserService) VerifyCode(id uint, code int) error {
 		return errors.New(err.Error())
 	}
 
-	fmt.Printf("hehehe %v and %v", user.Code, code)
-	if user.Code != code {
-		return errors.New("verification code does not match")
-	}
-
 	if !time.Now().Before(user.Expiry) {
 		return errors.New("verification code expired")
 	}
@@ -128,7 +125,7 @@ func (s UserService) VerifyCode(id uint, code int) error {
 	_, err = s.Repo.UpdateUser(id, userUpdated)
 
 	if err != nil {
-		return errors.New("unable to verify uset")
+		return errors.New("unable to verify unset")
 	}
 
 	return nil
