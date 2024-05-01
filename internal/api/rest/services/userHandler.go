@@ -2,8 +2,8 @@ package services
 
 import (
 	"fmt"
+	"log"
 	"net/http"
-	"strconv"
 
 	"ecommerce.com/helper"
 	"ecommerce.com/internal/api/rest"
@@ -79,9 +79,7 @@ func (h *UserHandler) Register(ctx *gin.Context) {
 func (h *UserHandler) Login(ctx *gin.Context) {
 
 	loginInput := dto.UserLogin{}
-
 	err := ctx.BindJSON(&loginInput)
-
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"message": "plese provide valid inputs"})
 		return
@@ -99,37 +97,20 @@ func (h *UserHandler) Login(ctx *gin.Context) {
 }
 
 func (h *UserHandler) Verify(ctx *gin.Context) {
-	user := h.svc.Auth.GetCurrentUser(ctx)
-	fmt.Printf("User code: %s\n", user.Code) // Print user code for debugging purposes
 
-	var req map[string]interface{}
-	if err := ctx.ShouldBindJSON(&req); err != nil {
+	user := h.svc.Auth.GetCurrentUser(ctx)
+	log.Printf("User code: %v", user.Code) // Print user code for debugging purposes
+
+	var req dto.VerificationCodeInput
+	if err := ctx.BindJSON(&req); err != nil {
 		fmt.Printf("Error binding JSON: %v\n", err)
 		ctx.JSON(http.StatusBadRequest, gin.H{"message": "please provide a valid input"})
 		return
 	}
+	err := h.svc.VerifyCode(user.ID, req.Code)
 
-	codeStr, ok := req["code"].(string)
-	fmt.Print("CODEsTR", codeStr)
-	if !ok {
-		fmt.Println("Invalid code type") // Print error message for debugging purposes
-		ctx.JSON(http.StatusBadRequest, gin.H{"message": "invalid code type"})
-		return
-	}
-
-	code, err := strconv.Atoi(codeStr)
 	if err != nil {
-		fmt.Println("Error converting code to int:", err) // Print error message for debugging purposes
-		ctx.JSON(http.StatusBadRequest, gin.H{"message": "error converting code to int"})
-		return
-	}
-
-	fmt.Printf("Request code:  %v, %d\n", user.Code, code) // Print request code for debugging purposes
-
-	// Check if user code matches request code
-	if user.Code != code {
-		fmt.Println("User code does not match request code") // Print error message for debugging purposes
-		ctx.JSON(http.StatusBadRequest, gin.H{"message": "verification code does not match"})
+		ctx.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
 		return
 	}
 
@@ -140,18 +121,19 @@ func (h *UserHandler) GetVerificationCode(ctx *gin.Context) {
 	user := h.svc.Auth.GetCurrentUser(ctx)
 
 	// replaced two returns by only one
-	err := h.svc.GetVerificationCode(user)
+	code, err := h.svc.GetVerificationCode(user)
 
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"message": "unable to generate verification code"})
 	}
-	ctx.JSON(http.StatusOK, gin.H{"message": "verification Code"})
+	ctx.JSON(http.StatusOK, gin.H{"message": "get verification code", "data": code})
 
 }
 
 func (h *UserHandler) GetProfile(ctx *gin.Context) {
 
 	user := h.svc.Auth.GetCurrentUser(ctx)
+	log.Printf("user %v", user)
 
 	//TODO// Error on user set
 
